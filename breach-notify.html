@@ -679,15 +679,24 @@
   .tl-deadline.info    { color: var(--text-muted); }
 
   .tl-deadline-badge {
-    background: currentColor;
-    color: var(--bg);
-    font-size: 9px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    opacity: 0.9;
+    background: var(--accent);
+    color: #ffffff;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    padding: 3px 8px;
+    border-radius: 4px;
     white-space: nowrap;
+    vertical-align: middle;
+    margin-left: 6px;
+    box-shadow: 0 0 10px rgba(232,83,58,0.45);
+    animation: pulse-badge 1.8s ease-in-out infinite;
+  }
+
+  @keyframes pulse-badge {
+    0%, 100% { box-shadow: 0 0 10px rgba(232,83,58,0.45); }
+    50%       { box-shadow: 0 0 18px rgba(232,83,58,0.75); }
   }
 
   .tl-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
@@ -2146,7 +2155,7 @@ async function computeResults() {
       html += `<div class="tl-item ${step.cls}">
         <div class="tl-deadline ${rem.cls}">
           ${step.deadline}
-          ${rem.vencido ? '<span class="tl-deadline-badge">VENCIDO</span>' : ''}
+          ${rem.vencido ? '<span class="tl-deadline-badge">⚠ PLAZO VENCIDO</span>' : ''}
         </div>
         <div class="tl-title">${step.title}</div>
         <div class="tl-desc">${step.desc}</div>
