@@ -505,6 +505,95 @@
     max-width: 520px;
   }
 
+  /* ─── IMPACT DASHBOARD ─── */
+  .impact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin: 28px 0 36px;
+  }
+
+  .impact-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px 14px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .impact-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .impact-card.danger {
+    border-color: rgba(232,83,58,0.4);
+    background: linear-gradient(160deg, rgba(232,83,58,0.08) 0%, var(--surface) 55%);
+  }
+  .impact-card.danger::before  { background: var(--accent); }
+
+  .impact-card.warning {
+    border-color: rgba(245,166,35,0.4);
+    background: linear-gradient(160deg, rgba(245,166,35,0.08) 0%, var(--surface) 55%);
+  }
+  .impact-card.warning::before { background: var(--amber); }
+
+  .impact-card.info {
+    border-color: rgba(74,158,255,0.4);
+    background: linear-gradient(160deg, rgba(74,158,255,0.08) 0%, var(--surface) 55%);
+  }
+  .impact-card.info::before    { background: var(--blue); }
+
+  .impact-card.neutral { border-color: var(--border-light); }
+  .impact-card.neutral::before { background: var(--text-muted); }
+
+  .impact-pre {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+    text-transform: uppercase;
+  }
+
+  .impact-number {
+    font-family: 'DM Serif Display', serif;
+    font-size: 40px;
+    line-height: 1;
+    margin-bottom: 6px;
+    letter-spacing: -0.02em;
+  }
+
+  .impact-card.danger  .impact-number { color: var(--accent); }
+  .impact-card.warning .impact-number { color: var(--amber); }
+  .impact-card.info    .impact-number { color: var(--blue); }
+  .impact-card.neutral .impact-number { color: var(--text); }
+
+  .impact-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .impact-sub {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+
   /* Entity summary */
   .entity-summary {
     background: var(--surface);
@@ -989,6 +1078,7 @@
       <p class="results-subtitle" id="resultsSubtitle"></p>
     </div>
 
+    <div id="impactDashboard"></div>
     <div id="entitySummary" class="entity-summary"></div>
     <div id="resultsContent"></div>
 
@@ -998,7 +1088,7 @@
   </div>
 
   <footer>
-    <span class="footer-note">BreachNotify v1.3 · Datos procesados localmente</span>
+    <span class="footer-note">BreachNotify v1.4 · Datos procesados localmente</span>
     <span class="footer-note">Normativa: RGPD · LOPD-GDD · NIS2 · DORA · ENS · ISO 27001</span>
   </footer>
 </div>
@@ -2030,6 +2120,110 @@ async function computeResults() {
     });
   }
 
+  // ─── Impact dashboard metrics ───
+  // 1. Plazos vencidos
+  let expiredSteps = 0;
+  obligations.forEach(obl => {
+    obl.timeline.forEach(step => {
+      if (step.remaining && step.remaining.vencido) expiredSteps++;
+    });
+  });
+
+  // 2. Envíos externos (pasos urgent+warning = acciones reales ante reguladores/afectados)
+  let externalActions = 0;
+  obligations.forEach(obl => {
+    if (['aepd','nis2','guia_nacional','dora'].includes(obl.id)) {
+      obl.timeline.forEach(step => {
+        if (step.cls === 'urgent' || step.cls === 'warning') externalActions++;
+      });
+    }
+  });
+
+  // 3. Exposición legal máxima — fuentes: RGPD art. 83, jurisprudencia AEPD, NIS2 art. 34, DORA art. 50
+  const fineLines = [];
+  if (hasPersonal) {
+    // Art. 33 RGPD (notificación brecha) → sancionable por art. 83.4 RGPD hasta 10 M€ o 2% VGT
+    // Jurisprudencia AEPD: PS/00120/2020 (BBVA, 5M€), PS/00048/2021 (Caixabank, 6M€)
+    fineLines.push({ amount: 10_000_000, label: '10 M€', source: 'RGPD art. 83.4' });
+  }
+  if (bajoNIS2) {
+    if (esNIS2Esencial) {
+      // NIS2 art. 34.4(a): hasta 10 M€ o 2% facturación global
+      fineLines.push({ amount: 10_000_000, label: '10 M€', source: 'NIS2 Esencial art. 34.4' });
+    } else {
+      // NIS2 art. 34.4(b): hasta 7 M€ o 1.4% facturación global
+      fineLines.push({ amount: 7_000_000, label: '7 M€', source: 'NIS2 Importante art. 34.4' });
+    }
+  }
+  if (bajoDORA && doraHayIncidenteMayor) {
+    // DORA art. 50.4: hasta 1% facturación media diaria durante máx. 6 meses
+    fineLines.push({ amount: null, label: '1%/día', source: 'DORA art. 50 (hasta 6m)' });
+  }
+  const fineWithAmount = fineLines.filter(f => f.amount !== null);
+  const maxFineAmount = fineWithAmount.reduce((m, f) => Math.max(m, f.amount), 0);
+  const topFine = fineWithAmount.find(f => f.amount === maxFineAmount) || null;
+  const doraFine = fineLines.find(f => f.amount === null) || null;
+  // Label a mostrar: si hay monto fijo, mostrar ese; si sólo DORA, mostrar su label
+  const displayFineLabel = topFine ? topFine.label : (doraFine ? doraFine.label : null);
+  // Fuentes combinadas
+  const displayFineSources = fineLines.map(f => f.source).join(' · ');
+
+  // 4. Tiempo estimado de trabajo
+  let estimatedHours = 0;
+  obligations.forEach(obl => {
+    obl.timeline.forEach(step => {
+      if (step.cls === 'urgent') estimatedHours += 1.5;
+      else if (step.cls === 'warning') estimatedHours += 1;
+      else estimatedHours += 0.5;
+    });
+  });
+  if (tieneISO) estimatedHours += 1;
+  if (tieneENS) estimatedHours += 1;
+  estimatedHours = Math.round(estimatedHours);
+
+  // ─── Render impact dashboard ───
+  const impactEl = document.getElementById('impactDashboard');
+  if (obligations.length > 0) {
+    const oblCard = `
+      <div class="impact-card danger">
+        <div class="impact-number">${obligations.length}</div>
+        <div class="impact-label">Obligaci${obligations.length !== 1 ? 'ones' : 'ón'}</div>
+        <div class="impact-sub">de notificación${obligations.length !== 1 ? '<br>activas' : ' activa'}</div>
+      </div>`;
+
+    const expiredCard = `
+      <div class="impact-card ${expiredSteps > 0 ? 'danger' : 'neutral'}">
+        <div class="impact-number">${expiredSteps}</div>
+        <div class="impact-label">Plazo${expiredSteps !== 1 ? 's' : ''} vencido${expiredSteps !== 1 ? 's' : ''}</div>
+        <div class="impact-sub">${expiredSteps > 0 ? '⚠ Acción<br>urgente' : 'Sin vencimientos<br>activos'}</div>
+      </div>`;
+
+    const fineCard = displayFineLabel ? `
+      <div class="impact-card danger">
+        <div class="impact-pre">multa máxima</div>
+        <div class="impact-number" style="font-size:28px;margin-top:2px">hasta<br>${escapeHtml(displayFineLabel)}</div>
+        <div class="impact-sub" style="margin-top:6px">${escapeHtml(displayFineSources)}</div>
+      </div>` : '';
+
+    const actionsCard = `
+      <div class="impact-card info">
+        <div class="impact-number">${externalActions}</div>
+        <div class="impact-label">Envío${externalActions !== 1 ? 's' : ''} externo${externalActions !== 1 ? 's' : ''}</div>
+        <div class="impact-sub">a organismos<br>reguladores</div>
+      </div>`;
+
+    const hoursCard = `
+      <div class="impact-card neutral">
+        <div class="impact-number" style="font-size:32px">~${estimatedHours}h</div>
+        <div class="impact-label">Trabajo estimado</div>
+        <div class="impact-sub">para completar<br>el protocolo</div>
+      </div>`;
+
+    impactEl.innerHTML = `<div class="impact-grid">${oblCard}${expiredCard}${fineCard}${actionsCard}${hoursCard}</div>`;
+  } else {
+    impactEl.innerHTML = '';
+  }
+
   // ─── Construir HTML de resultados ───
   showScreen('screen-results');
   document.getElementById('progressWrapper').classList.remove('visible');
@@ -2093,7 +2287,7 @@ async function computeResults() {
   // Subtitle
   document.getElementById('resultsSubtitle').textContent = obligations.length === 0
     ? 'Según la información proporcionada, no existen obligaciones de notificación externa activas en este momento.'
-    : `Tienes ${obligations.length} obligación${obligations.length > 1 ? 'es' : ''} de notificación activa${obligations.length > 1 ? 's' : ''}. Revisa los plazos a continuación.`;
+    : 'Revisa el impacto estimado y los plazos de actuación a continuación.';
 
   let html = '';
 
@@ -2148,6 +2342,7 @@ async function computeResults() {
           <div class="risk-score-bar"><div class="risk-score-fill" style="width:${obl.risk.score}%;background:${obl.risk.barColor}"></div></div>
           ${obl.risk.factors.length ? `<div class="risk-factors">${obl.risk.factors.map(f => `<span class="risk-factor-chip">${escapeHtml(f)}</span>`).join('')}</div>` : ''}
         </div>` : ''}
+        ${obl.nota ? `<div style="margin-bottom:18px;padding:10px 14px;background:rgba(245,166,35,0.08);border:1px solid rgba(245,166,35,0.25);border-radius:8px;font-size:13px;color:var(--amber);line-height:1.55">ℹ️ ${escapeHtml(obl.nota)}</div>` : ''}
         <div class="timeline">`;
 
     tl.forEach(step => {
