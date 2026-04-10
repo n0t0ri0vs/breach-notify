@@ -989,7 +989,7 @@
   </div>
 
   <footer>
-    <span class="footer-note">BreachNotify v1.2 · Datos procesados localmente</span>
+    <span class="footer-note">BreachNotify v1.3 · Datos procesados localmente</span>
     <span class="footer-note">Normativa: RGPD · LOPD-GDD · NIS2 · DORA · ENS · ISO 27001</span>
   </footer>
 </div>
@@ -1070,11 +1070,51 @@ const ENTIDADES_DORA = [
   { id:'ninguna_dora',  label:'Ninguna de las anteriores',          supervisor:null },
 ];
 
+/* ═══════════════════════════════════════════════════
+   TIPOS DE INCIDENTE — Guía Nacional de Notificación (CCN/INCIBE/CNPIC 2020)
+   Tabla 4: niveles de peligrosidad por tipo de incidente.
+   El atributo peligrosidad es interno al motor, no se muestra al usuario.
+═══════════════════════════════════════════════════ */
+const INCIDENT_TYPES = [
+  { id:'apt_ransomware',   peligrosidad:'CRITICO'       },
+  { id:'malware_infeccion',peligrosidad:'ALTO'          },
+  { id:'acceso_datos',     peligrosidad:'ALTO'          },
+  { id:'dos_ddos',         peligrosidad:'ALTO'          },
+  { id:'phishing_fraude',  peligrosidad:'ALTO'          },
+  { id:'vulnerabilidad',   peligrosidad:'MEDIO'         },
+  { id:'otro',             peligrosidad:'INDETERMINADO' },
+];
+
+/* ═══════════════════════════════════════════════════
+   CANALES DE NOTIFICACIÓN CSIRT
+   Fuente: Guía Nacional + páginas oficiales INCIBE-CERT / CCN-CERT
+═══════════════════════════════════════════════════ */
+const CANALES = {
+  INCIBE_CERT: {
+    nombre:                   'INCIBE-CERT',
+    aplica:                   'Entidades privadas',
+    email_general:            'incidencias@incibe-cert.es',
+    email_operadores_criticos:'pic@incibe-cert.es',
+    portal:                   'https://www.incibe.es/incibe-cert/respuesta-incidentes',
+    nota:                     'Canal preferente: portal web. El email es complementario; enviar preferiblemente con cifrado PGP.',
+  },
+  CCN_CERT: {
+    nombre:             'CCN-CERT',
+    aplica:             'Sector público, AA.PP., entidades Ley 40/2015',
+    herramienta:        'LUCIA',
+    url_lucia:          'https://www.ccn-cert.cni.es/gestion-de-incidentes/lucia.html',
+    email_alternativo:  'incidentes@ccn-cert.cni.es',
+    nota:               'Canal preferente: LUCIA. El email solo como alternativa si LUCIA no está disponible.',
+  },
+};
+
 // Congelar arrays de constantes para prevenir mutación desde la consola
 Object.freeze(DATA_TYPES);
 Object.freeze(SECTORES_NIS2_ESENCIAL);
 Object.freeze(SECTORES_NIS2_IMPORTANTE);
 Object.freeze(ENTIDADES_DORA);
+Object.freeze(INCIDENT_TYPES);
+Object.freeze(CANALES);
 
 /* ═══════════════════════════════════════════════════
    NLP — DICCIONARIOS DE KEYWORDS
@@ -1146,7 +1186,24 @@ function buildQuestions() {
       options: DATA_TYPES,
     },
 
-    /* Q2 — Sector */
+    /* Q2 — Tipo de incidente (Guía Nacional Tabla 4) */
+    {
+      id: 'incident_type',
+      type: 'radio',
+      title: '¿Qué tipo de incidente ha ocurrido?',
+      subtitle: 'Determina el nivel de peligrosidad y la obligatoriedad de notificación. Si no estás seguro, selecciona el que mejor se aproxime o el más grave.',
+      options: [
+        { id:'apt_ransomware',    label:'Ataque dirigido o ransomware',                 desc:'APT, ransomware, sabotaje deliberado y organizado' },
+        { id:'malware_infeccion', label:'Infección por malware o sistema comprometido', desc:'Virus, troyano, gusano, rootkit, servidor de mando y control (C&C)' },
+        { id:'acceso_datos',      label:'Acceso no autorizado o robo de información',   desc:'Exfiltración de datos, acceso indebido a información, pérdida de datos' },
+        { id:'dos_ddos',          label:'Denegación de servicio (DoS / DDoS)',           desc:'Interrupción o degradación del servicio por ataque volumétrico o de aplicación' },
+        { id:'phishing_fraude',   label:'Phishing, fraude o suplantación de identidad', desc:'Engaño a usuarios, robo de credenciales mediante ingeniería social' },
+        { id:'vulnerabilidad',    label:'Explotación de vulnerabilidad',                desc:'Aprovechamiento de un fallo conocido o desconocido en sistemas o aplicaciones' },
+        { id:'otro',              label:'Otro tipo de incidente / No estoy seguro',      desc:'Incidente no clasificable claramente en las categorías anteriores' },
+      ],
+    },
+
+    /* Q3 — Sector */
     {
       id: 'sector_nis2_esencial',
       type: 'multioption',
@@ -1160,7 +1217,7 @@ function buildQuestions() {
       exclusive: ['sector_ninguno'],
     },
 
-    /* Q3 — Tamaño para NIS2 */
+    /* Q4 — Tamaño para NIS2 */
     {
       id: 'company_size',
       type: 'radio',
@@ -1173,7 +1230,7 @@ function buildQuestions() {
       ],
     },
 
-    /* Q4 — ¿Entidad financiera DORA? */
+    /* Q5 — ¿Entidad financiera DORA? */
     {
       id: 'dora_entity',
       type: 'radio',
@@ -1184,7 +1241,7 @@ function buildQuestions() {
       ],
     },
 
-    /* Q5 — Certificaciones */
+    /* Q6 — Certificaciones */
     {
       id: 'certifications',
       type: 'multioption',
@@ -1199,7 +1256,7 @@ function buildQuestions() {
       optional: true,
     },
 
-    /* Q6 — Número aproximado de afectados */
+    /* Q7 — Número aproximado de afectados */
     {
       id: 'affected_count',
       type: 'radio',
@@ -1215,7 +1272,7 @@ function buildQuestions() {
       ],
     },
 
-    /* Q7 — Descripción libre del incidente */
+    /* Q8 — Descripción libre del incidente */
     {
       id: 'incident_desc',
       type: 'textarea',
@@ -1248,7 +1305,7 @@ function renderQuestion() {
 
   document.getElementById('progressFill').style.width = pct + '%';
   document.getElementById('progressCount').textContent = `${state.currentQ + 1} / ${state.totalQ}`;
-  document.getElementById('progressLabel').textContent = state.currentQ < 5 ? 'Perfil de la entidad' : 'Detalles del incidente';
+  document.getElementById('progressLabel').textContent = state.currentQ < 6 ? 'Perfil de la entidad' : 'Detalles del incidente';
 
   document.getElementById('btnBack').style.visibility = state.currentQ === 0 ? 'hidden' : 'visible';
   document.getElementById('btnNext').textContent = state.currentQ === state.totalQ - 1 ? 'Ver mi protocolo →' : 'Siguiente →';
@@ -1614,6 +1671,30 @@ async function computeResults() {
   const tieneISO = certs.includes('iso27001');
   const tieneENS = certs.includes('ens');
 
+  // ─── Guía Nacional de Notificación / RD-Ley 12/2018 ───
+  const peligrosidad = INCIDENT_TYPES.find(t => t.id === a.incident_type)?.peligrosidad || 'INDETERMINADO';
+  const PELIGROSIDAD_OBLIGATORIA = ['CRITICO', 'MUY_ALTO', 'ALTO'];
+  const notificacionCSIRT_obligatoria = bajoNIS2 || PELIGROSIDAD_OBLIGATORIA.includes(peligrosidad);
+  // Canal: CCN-CERT para sector público/ENS/AAPP (esencial_7 = Adm. Pública), INCIBE-CERT para privado
+  const usaCCNCERT = tieneENS || (sectorSel || []).includes('esencial_7');
+  const canalCSIRT = usaCCNCERT ? CANALES.CCN_CERT : CANALES.INCIBE_CERT;
+  // Operadores críticos privados usan email diferenciado de INCIBE-CERT
+  const esOperadorCritico = !usaCCNCERT && esEsencialSector;
+  const emailCSIRT = canalCSIRT === CANALES.INCIBE_CERT
+    ? (esOperadorCritico ? CANALES.INCIBE_CERT.email_operadores_criticos : CANALES.INCIBE_CERT.email_general)
+    : CANALES.CCN_CERT.email_alternativo;
+  const portalCSIRT = canalCSIRT === CANALES.INCIBE_CERT
+    ? CANALES.INCIBE_CERT.portal
+    : CANALES.CCN_CERT.url_lucia;
+  // Cadena de normativas para checklists (autogenerada)
+  const regulacionAfectada = [
+    hasPersonal                                    ? 'RGPD / LOPD-GDD'    : null,
+    bajoNIS2                                       ? 'NIS2'               : null,
+    bajoDORA                                       ? 'DORA'               : null,
+    tieneENS                                       ? 'ENS'                : null,
+    notificacionCSIRT_obligatoria && !bajoNIS2     ? 'RD-Ley 12/2018'    : null,
+  ].filter(Boolean).join(' · ') || 'En determinación';
+
   // ─── Afectados ───
   const affected = a.affected_count;
   const muchos = ['1000a10000','mas10000'].includes(affected);
@@ -1705,7 +1786,8 @@ async function computeResults() {
   if (bajoNIS2) {
     const h24 = hoursLeft(24);
     const h72 = hoursLeft(72);
-    const csirt = tieneENS || (a.sector_nis2_esencial||[]).includes('esencial_7') ? 'CCN-CERT' : 'INCIBE-CERT';
+    const coexisteGuiaNacional = PELIGROSIDAD_OBLIGATORIA.includes(peligrosidad);
+    const portalLabel = canalCSIRT === CANALES.INCIBE_CERT ? portalCSIRT : `LUCIA — ${portalCSIRT}`;
     obligations.push({
       id: 'nis2',
       icon: '🛡️',
@@ -1714,20 +1796,30 @@ async function computeResults() {
       urgencyLabel: 'primer deadline',
       urgencyColor: h24.cls,
       risk: riskScores.nis2,
-      title: `Notificación NIS2 — ${esNIS2Esencial ? 'Entidad Esencial' : 'Entidad Importante'}`,
-      dest: `${csirt} · Anteproyecto Ley Ciberseguridad (transposición NIS2)`,
+      title: `Notificación NIS2 — ${esNIS2Esencial ? 'Entidad Esencial' : 'Entidad Importante'} 🔶 PRIORITARIO`,
+      dest: `${canalCSIRT.nombre} · ${emailCSIRT} · Anteproyecto Ley Ciberseguridad (transposición NIS2)`,
       color: 'amber',
+      nota: coexisteGuiaNacional
+        ? `Los plazos NIS2 son más estrictos y tienen precedencia sobre la Guía Nacional. Usa el mismo canal (${canalCSIRT.nombre}) para cumplir ambos marcos simultáneamente.`
+        : null,
       timeline: [
         {
           cls: 'urgent',
           deadline: `Antes de ${deadline(24)} · 24h ALERTA TEMPRANA`,
           remaining: h24,
           title: 'Alerta temprana al CSIRT',
-          desc: `Notifica a ${csirt} (${csirt === 'INCIBE-CERT' ? 'incibe.es/protege-tu-empresa/gestion-incidentes' : 'ccn-cert.cni.es'}) que existe un incidente significativo en curso.`,
+          desc: `Notifica a <strong>${canalCSIRT.nombre}</strong> que existe un incidente significativo en curso.<br>
+            📧 <a href="mailto:${emailCSIRT}" style="color:var(--amber)">${emailCSIRT}</a> &nbsp;|&nbsp;
+            🌐 <a href="${portalCSIRT}" target="_blank" rel="noopener" style="color:var(--amber)">${portalLabel}</a><br>
+            <em style="font-size:12px;color:var(--text-muted)">${canalCSIRT.nota}</em>`,
           checklist: [
+            'Fecha y hora del incidente (en UTC)',
+            'Fecha y hora de detección (en UTC) — campo separado',
             '¿Se sospecha acción maliciosa o ilícita?',
-            '¿Tiene repercusiones transfronterizas (afecta a otros países UE)?',
+            '¿Tiene repercusiones transfronterizas (afecta a sistemas o usuarios en otros países UE)?',
             'Descripción inicial muy resumida del incidente',
+            `Regulación afectada: ${regulacionAfectada}`,
+            '¿Requiere actuación de Fuerzas y Cuerpos de Seguridad del Estado? (sí/no)',
           ]
         },
         {
@@ -1738,6 +1830,8 @@ async function computeResults() {
           desc: 'Notificación formal con evaluación inicial de impacto.',
           checklist: [
             'Evaluación inicial de peligrosidad e impacto',
+            'Recursos tecnológicos afectados: número, tipo, IPs, SO y versiones de aplicaciones',
+            'Origen conocido del incidente (correo sospechoso, USB, web maliciosa, credenciales comprometidas…)',
             'Indicadores de compromiso (IoCs) si están disponibles',
             'Servicios y sistemas afectados',
             'Medidas de contención adoptadas',
@@ -1756,6 +1850,80 @@ async function computeResults() {
             'Impacto real (transfronterizo si aplica)',
           ]
         }
+      ]
+    });
+  }
+
+  /* Guía Nacional → INCIBE-CERT / CCN-CERT (cuando NIS2 no aplica) */
+  if (!bajoNIS2 && notificacionCSIRT_obligatoria) {
+    const portalLabel = canalCSIRT === CANALES.INCIBE_CERT ? portalCSIRT : `LUCIA — ${portalCSIRT}`;
+    const labelPeligrosidad = { CRITICO:'CRÍTICO', MUY_ALTO:'MUY ALTO', ALTO:'ALTO' }[peligrosidad] || peligrosidad;
+    const tieneIntermedia = peligrosidad === 'CRITICO' || peligrosidad === 'MUY_ALTO';
+    const tieneInformeFinal = tieneIntermedia;
+    const deadlineIntermedia = peligrosidad === 'CRITICO' ? '24/48 horas' : '72 horas';
+    const deadlineInformeFinal = peligrosidad === 'CRITICO' ? '20 días' : '40 días';
+    const horasInformeFinal = peligrosidad === 'CRITICO' ? 480 : 960; // 20d o 40d en horas
+
+    obligations.push({
+      id: 'guia_nacional',
+      icon: '🛡️',
+      iconClass: 'icon-amber',
+      urgency: null,
+      urgencyLabel: `Peligrosidad ${labelPeligrosidad}`,
+      urgencyColor: peligrosidad === 'CRITICO' ? 'red' : 'amber',
+      risk: riskScores.nis2,
+      title: `Notificación Guía Nacional — Peligrosidad ${labelPeligrosidad}`,
+      dest: `${canalCSIRT.nombre} · ${emailCSIRT} · RD-Ley 12/2018 · Guía Nacional de Notificación de Ciberincidentes`,
+      color: 'amber',
+      timeline: [
+        {
+          cls: 'urgent',
+          deadline: 'INMEDIATA — en cuanto tengas conocimiento del incidente',
+          remaining: { text: 'Sin demora', cls: peligrosidad === 'CRITICO' ? 'red' : 'amber', vencido: false },
+          title: 'Notificación inicial',
+          desc: `Notifica a <strong>${canalCSIRT.nombre}</strong> sin demora.<br>
+            📧 <a href="mailto:${emailCSIRT}" style="color:var(--amber)">${emailCSIRT}</a> &nbsp;|&nbsp;
+            🌐 <a href="${portalCSIRT}" target="_blank" rel="noopener" style="color:var(--amber)">${portalLabel}</a><br>
+            <em style="font-size:12px;color:var(--text-muted)">${canalCSIRT.nota}</em>`,
+          checklist: [
+            'Fecha y hora del incidente (en UTC)',
+            'Fecha y hora de detección (en UTC) — campo separado',
+            'Descripción general del incidente',
+            'Clasificación y tipo de incidente',
+            `Nivel de peligrosidad estimado: ${labelPeligrosidad}`,
+            'Recursos tecnológicos afectados: número, tipo, IPs, SO y versiones de aplicaciones',
+            'Origen conocido del incidente (fichero sospechoso, USB, web maliciosa, credenciales comprometidas…)',
+            '¿Tiene impacto transfronterizo? ¿Afecta a sistemas o usuarios en otros países UE? (sí/no)',
+            `Regulación afectada: ${regulacionAfectada}`,
+            'Plan de acción y contramedidas adoptadas hasta el momento',
+            '¿Requiere actuación de Fuerzas y Cuerpos de Seguridad del Estado? (sí/no)',
+          ]
+        },
+        ...(tieneIntermedia ? [{
+          cls: 'warning',
+          deadline: `${deadlineIntermedia} desde notificación inicial`,
+          remaining: { text: deadlineIntermedia, cls: 'amber', vencido: false },
+          title: 'Notificación intermedia',
+          desc: 'Actualización del estado del incidente con información adicional disponible.',
+          checklist: [
+            'Actualización del estado de contención',
+            'Nuevos datos sobre el alcance e impacto',
+            'Medidas adicionales adoptadas',
+          ]
+        }] : []),
+        ...(tieneInformeFinal ? [{
+          cls: 'normal',
+          deadline: `${deadlineInformeFinal} desde notificación inicial`,
+          remaining: { text: deadlineInformeFinal, cls: 'blue', vencido: false },
+          title: 'Informe final',
+          desc: 'Cierre del incidente con análisis completo.',
+          checklist: [
+            'Causa raíz del incidente',
+            'Descripción completa de lo ocurrido',
+            'Medidas definitivas adoptadas',
+            'Lecciones aprendidas',
+          ]
+        }] : []),
       ]
     });
   }
@@ -1859,11 +2027,12 @@ async function computeResults() {
 
   // Determinar normativas aplicables
   const normsApplied = [];
-  if (hasPersonal) normsApplied.push({ label:'RGPD / LOPD-GDD', cls:'chip-red' });
-  if (bajoNIS2)   normsApplied.push({ label:`NIS2 (${esNIS2Esencial ? 'Esencial' : 'Importante'})`, cls:'chip-amber' });
-  if (bajoDORA)   normsApplied.push({ label:'DORA', cls:'chip-blue' });
-  if (tieneISO)   normsApplied.push({ label:'ISO 27001', cls:'chip-green' });
-  if (tieneENS)   normsApplied.push({ label:'ENS', cls:'chip-green' });
+  if (hasPersonal)                              normsApplied.push({ label:'RGPD / LOPD-GDD', cls:'chip-red' });
+  if (bajoNIS2)                                 normsApplied.push({ label:`NIS2 (${esNIS2Esencial ? 'Esencial' : 'Importante'})`, cls:'chip-amber' });
+  if (!bajoNIS2 && notificacionCSIRT_obligatoria) normsApplied.push({ label:'RD-Ley 12/2018', cls:'chip-amber' });
+  if (bajoDORA)                                 normsApplied.push({ label:'DORA', cls:'chip-blue' });
+  if (tieneISO)                                 normsApplied.push({ label:'ISO 27001', cls:'chip-green' });
+  if (tieneENS)                                 normsApplied.push({ label:'ENS', cls:'chip-green' });
 
   // Entity summary
   const selectedDataLabels = selectedDataObjects
@@ -1891,6 +2060,14 @@ async function computeResults() {
       <div class="norm-tags">${normsApplied.map(n => `<span class="norm-chip ${n.cls}">${n.label}</span>`).join('')}</div>
     </div>
     <div class="entity-field">
+      <div class="entity-field-label">Tipo de incidente</div>
+      <div class="entity-field-value" style="font-size:13px">${INCIDENT_TYPES.find(t=>t.id===a.incident_type) ? questions.find(q=>q.id==='incident_type')?.options.find(o=>o.id===a.incident_type)?.label ?? '—' : '—'}</div>
+    </div>
+    <div class="entity-field">
+      <div class="entity-field-label">Peligrosidad</div>
+      <div class="entity-field-value" style="font-family:'DM Mono',monospace;font-size:13px;color:${peligrosidad==='CRITICO'?'var(--accent)':peligrosidad==='ALTO'?'var(--amber)':peligrosidad==='MEDIO'?'var(--blue)':'var(--text-muted)'}">${peligrosidad}</div>
+    </div>
+    <div class="entity-field">
       <div class="entity-field-label">Incidente detectado</div>
       <div class="entity-field-value" style="font-family:'DM Mono',monospace;font-size:13px">${a.incident_date ? new Date(a.incident_date).toLocaleString('es-ES') : 'No indicado'}</div>
     </div>
@@ -1915,8 +2092,17 @@ async function computeResults() {
     html += `<div class="no-obligation">
       <span class="no-icon">✅</span>
       <div>
-        <h3>Sin obligación de notificación externa</h3>
-        <p>Basándonos en los datos proporcionados, el incidente no activa ninguna obligación de notificación a organismos externos. Sin embargo, <strong>documenta internamente el incidente</strong> como buena práctica y por si la situación evoluciona.</p>
+        <h3>Sin obligación legal de notificación externa</h3>
+        <p style="margin-bottom:12px">Basándonos en los datos proporcionados, el incidente no activa ninguna obligación de notificación a organismos externos en este momento.</p>
+        <p style="margin-bottom:10px"><strong style="color:var(--green)">Puedes notificar voluntariamente a INCIBE-CERT:</strong></p>
+        <div style="font-size:13px;color:var(--text-dim);padding-left:8px;border-left:2px solid rgba(46,204,138,0.3)">
+          → Te da acceso a su capacidad de respuesta técnica sin coste<br>
+          → Contribuye a la inteligencia colectiva de ciberseguridad nacional<br>
+          → Si la situación evoluciona y el impacto aumenta, ya tienes el canal abierto<br><br>
+          📧 <a href="mailto:${CANALES.INCIBE_CERT.email_general}" style="color:var(--green)">${CANALES.INCIBE_CERT.email_general}</a> &nbsp;|&nbsp;
+          🌐 <a href="${CANALES.INCIBE_CERT.portal}" target="_blank" rel="noopener" style="color:var(--green)">${CANALES.INCIBE_CERT.portal}</a>
+        </div>
+        <p style="margin-top:12px;font-size:13px;color:var(--text-muted)">En cualquier caso, <strong style="color:var(--text)">documenta internamente el incidente</strong>. Si hay datos personales afectados, revisa si aplica notificación a la AEPD (72h).</p>
       </div>
     </div>`;
   }
@@ -2046,6 +2232,7 @@ async function computeResults() {
       <div class="advisory-body">
         <p style="margin-bottom:12px;font-size:13px;color:var(--text-dim)">Asunto: Comunicación importante sobre la seguridad de tus datos</p>
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.7;color:var(--text-dim)">
+          <span style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:11px">Regulación afectada: ${escapeHtml(regulacionAfectada)}</span><br><br>
           Estimado/a [Nombre],<br><br>
           Nos dirigimos a usted para informarle de un incidente de seguridad que puede haber afectado a sus datos personales.<br><br>
           <strong style="color:var(--text)">¿Qué ha ocurrido?</strong><br>
