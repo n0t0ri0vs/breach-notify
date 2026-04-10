@@ -1194,8 +1194,9 @@ const CANALES = {
     aplica:                   'Entidades privadas',
     email_general:            'incidencias@incibe-cert.es',
     email_operadores_criticos:'pic@incibe-cert.es',
-    portal:                   'https://www.incibe.es/incibe-cert/respuesta-incidentes',
-    nota:                     'Canal preferente: portal web. El email es complementario; enviar preferiblemente con cifrado PGP.',
+    portal:                   'https://www.incibe.es/incibe-cert/incidentes/respuesta-incidentes',
+    formulario:               'https://www.incibe.es/incibe-cert/incidentes/notificaciones',
+    nota:                     'Canal preferente: formulario web. El email es complementario; enviar preferiblemente con cifrado PGP.',
   },
   CCN_CERT: {
     nombre:             'CCN-CERT',
@@ -1783,7 +1784,7 @@ async function computeResults() {
     ? (esOperadorCritico ? CANALES.INCIBE_CERT.email_operadores_criticos : CANALES.INCIBE_CERT.email_general)
     : CANALES.CCN_CERT.email_alternativo;
   const portalCSIRT = canalCSIRT === CANALES.INCIBE_CERT
-    ? CANALES.INCIBE_CERT.portal
+    ? CANALES.INCIBE_CERT.formulario
     : CANALES.CCN_CERT.url_lucia;
   // Cadena de normativas para checklists (autogenerada)
   const regulacionAfectada = [
@@ -2303,7 +2304,7 @@ async function computeResults() {
           → Contribuye a la inteligencia colectiva de ciberseguridad nacional<br>
           → Si la situación evoluciona y el impacto aumenta, ya tienes el canal abierto<br><br>
           📧 <a href="mailto:${CANALES.INCIBE_CERT.email_general}" style="color:var(--green)">${CANALES.INCIBE_CERT.email_general}</a> &nbsp;|&nbsp;
-          🌐 <a href="${CANALES.INCIBE_CERT.portal}" target="_blank" rel="noopener" style="color:var(--green)">${CANALES.INCIBE_CERT.portal}</a>
+          🌐 <a href="${CANALES.INCIBE_CERT.formulario}" target="_blank" rel="noopener" style="color:var(--green)">${CANALES.INCIBE_CERT.formulario}</a>
         </div>
         <p style="margin-top:12px;font-size:13px;color:var(--text-muted)">En cualquier caso, <strong style="color:var(--text)">documenta internamente el incidente</strong>. Si hay datos personales afectados, revisa si aplica notificación a la AEPD (72h).</p>
       </div>
