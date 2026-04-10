@@ -26,6 +26,6 @@ Actualizar en dos sitios siempre:
 2. `SPEC.md`: campo "Versión actual" + fila en la tabla de historial
 
 ## Contexto del proyecto
-Este es BreachNotify. Lee siempre `SPEC.md` al inicio de cada sesión.
+Este es BreachNotify. Lee siempre `.claude/SPEC.md` al inicio de cada sesión.
 Archivo principal: `breach-notify.html` en la raíz.
 Stack: HTML/CSS/JS puro. Sin frameworks. Sin backend. Sin dependencias npm.
