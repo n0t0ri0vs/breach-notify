@@ -810,6 +810,70 @@
     letter-spacing: 0.05em;
   }
 
+  /* ─── RISK BADGE ─── */
+  .risk-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+  }
+  .risk-critical { background: rgba(232,83,58,0.18);  color: var(--accent); border: 1px solid rgba(232,83,58,0.4); }
+  .risk-high     { background: rgba(245,166,35,0.15); color: var(--amber);  border: 1px solid rgba(245,166,35,0.4); }
+  .risk-medium   { background: rgba(74,158,255,0.12); color: var(--blue);   border: 1px solid rgba(74,158,255,0.3); }
+  .risk-low      { background: var(--green-dim);      color: var(--green);  border: 1px solid rgba(46,204,138,0.3); }
+
+  .risk-score-bar  { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 8px; }
+  .risk-score-fill { height: 100%; border-radius: 2px; transition: width 0.7s cubic-bezier(0.4,0,0.2,1); }
+
+  .risk-factors    { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .risk-factor-chip { font-size: 11px; color: var(--text-muted); font-family: 'DM Mono', monospace; }
+  .risk-factor-chip::before { content: '· '; }
+
+  /* ─── NLP PANEL ─── */
+  .nlp-panel { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px; }
+  .nlp-section { margin-bottom: 12px; }
+  .nlp-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .nlp-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .nlp-tag {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+  }
+  .nlp-tag-vector { background: var(--blue-dim);  border: 1px solid rgba(74,158,255,0.3);  color: var(--blue); }
+  .nlp-tag-warn   { background: var(--amber-dim); border: 1px solid rgba(245,166,35,0.3);  color: var(--amber); }
+  .nlp-tag-ok     { background: var(--green-dim); border: 1px solid rgba(46,204,138,0.3);  color: var(--green); }
+  .nlp-hint {
+    font-size: 11px;
+    color: var(--amber);
+    font-family: 'DM Mono', monospace;
+    margin-top: 6px;
+  }
+  .nlp-hint::before { content: '→ '; }
+  .nlp-inconsistency {
+    background: var(--accent-dim);
+    border: 1px solid rgba(232,83,58,0.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--accent);
+    font-family: 'DM Mono', monospace;
+    margin-top: 8px;
+  }
+
   /* ─── VALIDATION ERROR ─── */
   .validation-error {
     color: var(--accent);
@@ -1012,6 +1076,53 @@ Object.freeze(SECTORES_NIS2_IMPORTANTE);
 Object.freeze(ENTIDADES_DORA);
 
 /* ═══════════════════════════════════════════════════
+   NLP — DICCIONARIOS DE KEYWORDS
+   Cada clave corresponde a un id de DATA_TYPES o a un vector de ataque.
+   Las keywords se normalizan (sin tildes, minúsculas) en analyzeIncidentText().
+═══════════════════════════════════════════════════ */
+const NLP_DATA_KEYWORDS = {
+  credenciales:    ['contraseña','password','credencial','credenciales','clave de acceso','hash de contrasena','usuario y contrasena','login','cuentas de usuario'],
+  iban:            ['iban','cuenta bancaria','numero de cuenta','datos bancarios','cuenta corriente','numero de iban'],
+  tarjeta:         ['tarjeta','tarjeta de credito','tarjeta de debito','visa','mastercard','cvv','pan','numero de tarjeta'],
+  salud:           ['salud','medico','medica','diagnostico','historia clinica','paciente','medicamento','enfermedad','clinica','hospital','receta','analisis clinico'],
+  dni:             ['dni','nie','pasaporte','nif','documento de identidad','documento nacional de identidad'],
+  biometria:       ['biometrico','biometrica','huella dactilar','reconocimiento facial','iris','huella digital'],
+  ideologia:       ['ideologia','religion','sindicato','partido politico','afiliacion sindical','creencia'],
+  nombre:          ['nombre completo','nombre y apellidos','nombres y apellidos','apellido'],
+  email_prof:      ['correo profesional','email corporativo','correo corporativo','email de empresa','correo de empresa','cuenta de correo corporativa'],
+  email_pers:      ['correo personal','email personal','gmail','hotmail','yahoo','cuenta de correo personal'],
+  telefono:        ['telefono','movil','numero de telefono','numero de movil','numero de contacto'],
+  ip:              ['direccion ip','ip publica','ip privada','direcciones ip','logs de ip'],
+  transacciones:   ['transaccion','pago realizado','cobro','transferencia','movimiento bancario','extracto bancario','operacion financiera'],
+  config_sistemas: ['configuracion de red','configuracion del sistema','firewall','vpn','router','switch','servidor expuesto','configuracion expuesta'],
+  codigo_fuente:   ['codigo fuente','repositorio','propiedad intelectual','codigo de la aplicacion','repositorio git'],
+};
+
+const NLP_VECTOR_KEYWORDS = {
+  phishing:             ['phishing','correo malicioso','correo fraudulento','correo de engano','enlace malicioso','suplantacion de identidad','spear phishing','vishing'],
+  ransomware:           ['ransomware','cifrado de archivos','archivos cifrados','encriptado','secuestro de datos','rescate','ransom','archivos inaccesibles'],
+  acceso_no_autorizado: ['acceso no autorizado','acceso indebido','intrusion','hackeo','comprometido','brecha de seguridad','acceso ilegitimo','acceso no permitido'],
+  perdida_dispositivo:  ['perdida del dispositivo','robo del dispositivo','portatil robado','movil perdido','usb perdido','dispositivo extraviado','extravio del equipo'],
+  insider:              ['empleado malintencionado','empleado descontento','ex empleado','acceso interno indebido','fuga interna','amenaza interna'],
+  malware:              ['malware','virus informatico','troyano','spyware','keylogger','software malicioso','codigo malicioso'],
+  error_configuracion:  ['mal configurado','configuracion incorrecta','expuesto publicamente','acceso publico no intencionado','bucket abierto','s3 abierto','servidor mal configurado'],
+  fuga_datos:           ['fuga de datos','exfiltracion de datos','datos expuestos','datos filtrados','datos publicados','datos robados','exfiltrado'],
+  ingenieria_social:    ['ingenieria social','engano','manipulacion','pretexting','baiting','llamada fraudulenta'],
+};
+
+const NLP_VECTOR_LABELS = {
+  phishing:             'Phishing / spear-phishing',
+  ransomware:           'Ransomware',
+  acceso_no_autorizado: 'Acceso no autorizado',
+  perdida_dispositivo:  'Pérdida / robo de dispositivo',
+  insider:              'Amenaza interna (insider)',
+  malware:              'Malware',
+  error_configuracion:  'Error de configuración',
+  fuga_datos:           'Fuga / exfiltración de datos',
+  ingenieria_social:    'Ingeniería social',
+};
+
+/* ═══════════════════════════════════════════════════
    QUESTIONNAIRE DEFINITION
 ═══════════════════════════════════════════════════ */
 function buildQuestions() {
@@ -1194,11 +1305,15 @@ function renderQuestion() {
 
   } else if (q.type === 'textarea') {
     const val = state.answers[q.id] || '';
-    html += `<textarea class="text-input" id="q_input" placeholder="${escapeAttr(q.placeholder)}" oninput="setAnswer('${q.id}', this.value)">${escapeHtml(val)}</textarea>`;
+    html += `<textarea class="text-input" id="q_input" placeholder="${escapeAttr(q.placeholder)}" oninput="setAnswer('${q.id}', this.value); debouncedNlpUpdate()">${escapeHtml(val)}</textarea>
+    <div id="nlpPanel" class="nlp-panel"></div>`;
   }
 
   html += `</div>`;
   container.innerHTML = html;
+
+  // Si el usuario vuelve a la pregunta de descripción y ya tiene texto, mostrar NLP de inmediato
+  if (q.type === 'textarea' && state.answers[q.id]) renderNlpPanel();
 
   // Scroll suave arriba
   container.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1290,6 +1405,171 @@ function prevQuestion() {
 }
 
 /* ═══════════════════════════════════════════════════
+   NLP — ANÁLISIS DE TEXTO LIBRE
+═══════════════════════════════════════════════════ */
+
+// Elimina tildes y pasa a minúsculas para comparación robusta
+function normalizeText(text) {
+  return String(text).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ');
+}
+
+// Analiza la descripción libre y devuelve vectores detectados,
+// tipos de dato inferidos y posibles inconsistencias con las respuestas previas.
+function analyzeIncidentText(text) {
+  const norm = normalizeText(text);
+
+  const detectedDataTypes = [];
+  for (const [id, keywords] of Object.entries(NLP_DATA_KEYWORDS)) {
+    if (keywords.some(kw => norm.includes(normalizeText(kw)))) {
+      const obj = DATA_TYPES.find(d => d.id === id);
+      if (obj) detectedDataTypes.push(obj);
+    }
+  }
+
+  const detectedVectors = [];
+  for (const [id, keywords] of Object.entries(NLP_VECTOR_KEYWORDS)) {
+    if (keywords.some(kw => norm.includes(normalizeText(kw)))) {
+      detectedVectors.push({ id, label: NLP_VECTOR_LABELS[id] });
+    }
+  }
+
+  const selectedDataTypes = state.answers['data_types'] || [];
+  const inconsistencies = [];
+
+  // Inconsistencia: usuario marcó "ninguno" pero la descripción menciona datos personales
+  if (selectedDataTypes.includes('ninguno') && detectedDataTypes.some(d => d.personal)) {
+    inconsistencies.push('La descripción menciona posibles datos personales, pero has indicado "ningún dato afectado". Revisa la pregunta 2.');
+  }
+
+  const unselected = detectedDataTypes.filter(d => !selectedDataTypes.includes(d.id));
+  const confirmed  = detectedDataTypes.filter(d =>  selectedDataTypes.includes(d.id));
+
+  return { unselected, confirmed, vectors: detectedVectors, inconsistencies };
+}
+
+/* ─── Live NLP panel (se renderiza bajo el textarea) ─── */
+let _nlpTimer = null;
+
+function debouncedNlpUpdate() {
+  clearTimeout(_nlpTimer);
+  _nlpTimer = setTimeout(renderNlpPanel, 380);
+}
+
+function renderNlpPanel() {
+  const panel = document.getElementById('nlpPanel');
+  if (!panel) return;
+  const text = state.answers['incident_desc'] || '';
+  if (text.trim().length < 15) { panel.innerHTML = ''; return; }
+
+  const { unselected, confirmed, vectors, inconsistencies } = analyzeIncidentText(text);
+  if (!unselected.length && !confirmed.length && !vectors.length && !inconsistencies.length) {
+    panel.innerHTML = ''; return;
+  }
+
+  let html = '';
+
+  if (vectors.length) {
+    html += `<div class="nlp-section">
+      <div class="nlp-label">// Vector del incidente detectado</div>
+      <div class="nlp-tags">${vectors.map(v => `<span class="nlp-tag nlp-tag-vector">${escapeHtml(v.label)}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  if (unselected.length) {
+    html += `<div class="nlp-section">
+      <div class="nlp-label">// Datos detectados en tu descripción — no marcados aún</div>
+      <div class="nlp-tags">${unselected.map(d => `<span class="nlp-tag nlp-tag-warn">${escapeHtml(d.icon)} ${escapeHtml(d.label)}</span>`).join('')}</div>
+      <div class="nlp-hint">¿Olvidaste seleccionarlos en la pregunta 2?</div>
+    </div>`;
+  }
+
+  if (confirmed.length) {
+    html += `<div class="nlp-section">
+      <div class="nlp-label">// Coherente con tu selección anterior</div>
+      <div class="nlp-tags">${confirmed.map(d => `<span class="nlp-tag nlp-tag-ok">${escapeHtml(d.icon)} ${escapeHtml(d.label)}</span>`).join('')}</div>
+    </div>`;
+  }
+
+  inconsistencies.forEach(msg => {
+    html += `<div class="nlp-inconsistency">⚠ ${escapeHtml(msg)}</div>`;
+  });
+
+  panel.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════
+   RISK SCORING ENGINE
+   Devuelve un score 0–100 y nivel (CRÍTICO/ALTO/MODERADO/BAJO)
+   por cada normativa, basado en: sensibilidad del dato,
+   volumen de afectados y presión temporal sobre los plazos.
+═══════════════════════════════════════════════════ */
+function computeRiskScore({ selectedDataObjects, selectedDataTypes, affected, incidentDt, sectorSel, size, doraEntity }) {
+  const hasNinguno   = selectedDataTypes.includes('ninguno');
+  const hoursElapsed = Math.max(0, (Date.now() - incidentDt.getTime()) / 3600000);
+
+  // ── Sensibilidad del tipo de dato (0–45) ──────────────────────────
+  let dataSens = 0;
+  if (!hasNinguno) {
+    const ids = selectedDataObjects.map(d => d.id);
+    if (['salud','biometria','ideologia'].some(id => ids.includes(id)))                          dataSens = 45;
+    else if (['iban','tarjeta'].some(id => ids.includes(id)))                                    dataSens = 38;
+    else if (['dni','credenciales'].some(id => ids.includes(id)))                                dataSens = 28;
+    else if (['nombre','email_pers','email_prof','telefono','ip'].some(id => ids.includes(id))) dataSens = 14;
+  }
+
+  // ── Volumen de afectados (0–30) ───────────────────────────────────
+  const volScore = { mas10000:30, '1000a10000':22, '100a1000':15, '10a100':8, menos10:3, desconocido:18 }[affected] || 0;
+
+  // ── Presión temporal por normativa (0–25) — cada una tiene su deadline ──
+  const tAEPD = hoursElapsed >= 60 ? 25 : hoursElapsed >= 48 ? 18 : hoursElapsed >= 24 ? 10 : hoursElapsed >= 12 ? 5 : 0;
+  const tNIS2 = hoursElapsed >= 20 ? 25 : hoursElapsed >= 12 ? 15 : hoursElapsed >= 6  ? 8  : 0;
+  const tDORA = hoursElapsed >= 4  ? 25 : hoursElapsed >= 2  ? 15 : hoursElapsed >= 1  ? 8  : 0;
+
+  // ── Score AEPD ────────────────────────────────────────────────────
+  const aepdRaw = dataSens + volScore + tAEPD;
+  const aepdFactors = [];
+  if (dataSens >= 38)  aepdFactors.push('Datos de categoría especial o financieros');
+  else if (dataSens)   aepdFactors.push('Datos personales identificativos');
+  if (volScore >= 22)  aepdFactors.push('Alto volumen de personas afectadas');
+  if (tAEPD >= 18)     aepdFactors.push('Plazo de 72h próximo a vencer');
+
+  // ── Score NIS2 ────────────────────────────────────────────────────
+  const isNingunoSector = sectorSel.includes('sector_ninguno');
+  const esEsencial = !isNingunoSector && SECTORES_NIS2_ESENCIAL.some((_, i) => sectorSel.includes(`esencial_${i}`));
+  const sectorPts  = esEsencial ? 30 : sectorSel.includes('sector_importante') ? 20 : 0;
+  const sizePts    = { grande:25, mediana:15, micro:0 }[size] || 0;
+  const nis2Raw    = sectorPts + sizePts + tNIS2 + (dataSens > 20 ? 10 : 0);
+  const nis2Factors = [];
+  if (esEsencial)      nis2Factors.push('Sector de alta criticidad (Anexo I NIS2)');
+  if (sizePts >= 25)   nis2Factors.push('Gran empresa — NIS2 de aplicación directa');
+  if (tNIS2 >= 15)     nis2Factors.push('Plazo de alerta temprana 24h próximo a vencer');
+
+  // ── Score DORA ────────────────────────────────────────────────────
+  const doraEntityPts = { banco:45, pago:38, inversion:35, seguro:35, intermediario_seg:28, fondo_pension:28, gestora:28, cripto:22, ecc:22, calificacion:15 }[doraEntity] || 0;
+  const doraDataPts   = selectedDataObjects.some(d => d.dora_relevant) ? 30 : 0;
+  const doraRaw       = doraEntityPts + doraDataPts + tDORA;
+  const doraFactors   = [];
+  if (doraEntityPts >= 35) doraFactors.push('Entidad financiera de alta importancia sistémica');
+  if (doraDataPts)         doraFactors.push('Datos TIC relevantes bajo DORA comprometidos');
+  if (tDORA >= 15)         doraFactors.push('Plazo de clasificación de 4h próximo a vencer');
+
+  function level(score) {
+    if (score >= 70) return { label:'CRÍTICO',  cls:'risk-critical', barColor:'var(--accent)' };
+    if (score >= 45) return { label:'ALTO',     cls:'risk-high',     barColor:'var(--amber)' };
+    if (score >= 20) return { label:'MODERADO', cls:'risk-medium',   barColor:'var(--blue)' };
+    return               { label:'BAJO',        cls:'risk-low',      barColor:'var(--green)' };
+  }
+
+  return {
+    aepd: { score: Math.min(100, aepdRaw), ...level(Math.min(100, aepdRaw)), factors: aepdFactors },
+    nis2: { score: Math.min(100, nis2Raw), ...level(Math.min(100, nis2Raw)), factors: nis2Factors },
+    dora: { score: Math.min(100, doraRaw), ...level(Math.min(100, doraRaw)), factors: doraFactors },
+  };
+}
+
+/* ═══════════════════════════════════════════════════
    DECISION ENGINE
 ═══════════════════════════════════════════════════ */
 async function computeResults() {
@@ -1355,6 +1635,9 @@ async function computeResults() {
     return { text: `${diff}h restantes`, cls: 'blue', vencido: false };
   }
 
+  // ─── Risk scoring ───
+  const riskScores = computeRiskScore({ selectedDataObjects, selectedDataTypes, affected, incidentDt, sectorSel, size, doraEntity });
+
   // ─── Construir obligaciones ───
   const obligations = [];
 
@@ -1369,6 +1652,7 @@ async function computeResults() {
       urgency: 72,
       urgencyLabel: 'primer deadline',
       urgencyColor: h72.cls,
+      risk: riskScores.aepd,
       title: 'Notificación a la AEPD',
       dest: 'Agencia Española de Protección de Datos · RGPD art. 33 / LOPD-GDD',
       color: 'accent',
@@ -1428,6 +1712,7 @@ async function computeResults() {
       urgency: 24,
       urgencyLabel: 'primer deadline',
       urgencyColor: h24.cls,
+      risk: riskScores.nis2,
       title: `Notificación NIS2 — ${esNIS2Esencial ? 'Entidad Esencial' : 'Entidad Importante'}`,
       dest: `${csirt} · Anteproyecto Ley Ciberseguridad (transposición NIS2)`,
       color: 'amber',
@@ -1486,6 +1771,7 @@ async function computeResults() {
       urgency: 4,
       urgencyLabel: 'clasificación → notificar',
       urgencyColor: h4.cls,
+      risk: riskScores.dora,
       title: `Notificación DORA — Incidente TIC Mayor`,
       dest: `${doraSupervisor} · Reglamento (UE) 2022/2554 y Reglamento Delegado 2025/301`,
       color: 'blue',
@@ -1544,6 +1830,7 @@ async function computeResults() {
       urgency: null,
       urgencyLabel: 'Valorar clasificación',
       urgencyColor: 'blue',
+      risk: riskScores.dora,
       title: 'DORA — Verificar clasificación del incidente',
       dest: `${doraSupervisor} · Reglamento (UE) 2022/2554`,
       color: 'blue',
@@ -1647,6 +1934,7 @@ async function computeResults() {
         <div class="obligation-meta">
           <div class="obligation-title">${obl.title}</div>
           <div class="obligation-dest">${obl.dest}</div>
+          ${obl.risk ? `<div style="margin-top:6px"><span class="risk-badge ${obl.risk.cls}">● ${obl.risk.label} · ${obl.risk.score}/100</span></div>` : ''}
         </div>
         ${firstDeadline ? `
         <div class="obligation-urgency">
@@ -1656,6 +1944,14 @@ async function computeResults() {
         <span class="obligation-chevron">⌄</span>
       </div>
       <div class="obligation-body">
+        ${obl.risk ? `<div style="margin-bottom:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--text-muted)">Índice de riesgo estimado</span>
+            <span class="risk-badge ${obl.risk.cls}">● ${obl.risk.label} · ${obl.risk.score}/100</span>
+          </div>
+          <div class="risk-score-bar"><div class="risk-score-fill" style="width:${obl.risk.score}%;background:${obl.risk.barColor}"></div></div>
+          ${obl.risk.factors.length ? `<div class="risk-factors">${obl.risk.factors.map(f => `<span class="risk-factor-chip">${escapeHtml(f)}</span>`).join('')}</div>` : ''}
+        </div>` : ''}
         <div class="timeline">`;
 
     tl.forEach(step => {
@@ -1713,6 +2009,30 @@ async function computeResults() {
           </ul>
         </div>
       </div>`;
+    }
+  }
+
+  // ─── Análisis NLP del vector de ataque ───
+  if (a.incident_desc && a.incident_desc.trim().length > 15) {
+    const nlp = analyzeIncidentText(a.incident_desc);
+    if (nlp.vectors.length || nlp.unselected.length || nlp.inconsistencies.length) {
+      html += `<div class="section-label">Análisis del vector</div>
+      <div class="advisory-card" style="border-left-color:var(--blue)">
+        <div class="advisory-tag">// NLP — Inferido de la descripción del incidente</div>
+        <div class="advisory-title">Vectores de ataque detectados</div>
+        <div class="advisory-body">`;
+
+      if (nlp.vectors.length) {
+        html += `<div class="nlp-tags" style="margin-bottom:12px">${nlp.vectors.map(v => `<span class="nlp-tag nlp-tag-vector">${escapeHtml(v.label)}</span>`).join('')}</div>`;
+      }
+      if (nlp.unselected.length) {
+        html += `<p style="font-size:13px;color:var(--amber);margin-bottom:8px">⚠ La descripción menciona datos no seleccionados en el formulario: ${nlp.unselected.map(d => `<strong>${escapeHtml(d.label)}</strong>`).join(', ')}. Considera si el análisis debería revisarse.</p>`;
+      }
+      nlp.inconsistencies.forEach(msg => {
+        html += `<div class="nlp-inconsistency" style="margin-top:4px">⚠ ${escapeHtml(msg)}</div>`;
+      });
+
+      html += `</div></div>`;
     }
   }
 
