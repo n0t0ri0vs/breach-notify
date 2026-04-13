@@ -7,7 +7,7 @@ Sin servidor. Sin base de datos. Todo se procesa localmente en tu navegador.
 
 ---
 
-## Attribution
+## Atribución
 
 BreachNotify was created by [Sergio Henestrosa](https://github.com/n0t0ri0vs). 
 If you build on this project or use it as inspiration, a mention of the original is appreciated.
