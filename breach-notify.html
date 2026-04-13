@@ -1088,7 +1088,7 @@
   </div>
 
   <footer>
-    <span class="footer-note">BreachNotify v1.4.1 · Datos procesados localmente</span>
+    <span class="footer-note">BreachNotify v1.5.0 · Datos procesados localmente</span>
     <span class="footer-note">Normativa: RGPD · LOPD-GDD · NIS2 · DORA · ENS · ISO 27001</span>
   </footer>
 </div>
@@ -2428,31 +2428,107 @@ async function computeResults() {
     }
   }
 
-  // Si hay descripción del incidente, mostrar nota de plantillas
+  // Si hay descripción del incidente, mostrar borrador de comunicación art. 34 RGPD
   if (a.incident_desc && a.incident_desc.trim().length > 20) {
+    // ── Consecuencias dinámicas por categoría de datos (art. 34 RGPD) ──
+    const dataIds = selectedDataObjects.map(d => d.id);
+    const consecuencias = [];
+    if (['iban','tarjeta','transacciones'].some(id => dataIds.includes(id)))
+      consecuencias.push('Existe riesgo de uso fraudulento de sus datos bancarios. Le recomendamos que contacte con su entidad financiera.');
+    if (dataIds.includes('dni'))
+      consecuencias.push('Existe riesgo de suplantación de identidad. Considere alertar a las autoridades si detecta usos no autorizados.');
+    if (['salud','ideologia','biometria'].some(id => dataIds.includes(id)))
+      consecuencias.push('Sus datos pertenecen a categorías especialmente protegidas. El riesgo de discriminación o perjuicio es considerado alto por la normativa.');
+    if (['email_prof','email_pers','telefono'].some(id => dataIds.includes(id)))
+      consecuencias.push('Puede recibir comunicaciones fraudulentas (phishing, smishing) utilizando sus datos.');
+    if (dataIds.includes('credenciales'))
+      consecuencias.push('Cambie inmediatamente las contraseñas de los servicios afectados y de cualquier otro servicio donde use las mismas credenciales.');
+    if (consecuencias.length === 0)
+      consecuencias.push('[CONSECUENCIAS — describa el impacto potencial para los afectados]');
+
+    const fechaDeteccion = incidentDt.toLocaleString('es-ES', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    const categoriasDatos = selectedDataObjects.filter(d => d.personal && !selectedDataTypes.includes('ninguno')).map(d => d.label).join(', ') || '[categorías bajo investigación]';
+
+    // ── Texto plano para clipboard (placeholders en [CAMPO]) ──
+    window._draftText = [
+      'Asunto: Comunicación importante sobre la seguridad de sus datos personales',
+      '',
+      'Estimado/a [Nombre],',
+      '',
+      'Le escribimos para informarle de un incidente de seguridad que ha afectado a datos personales bajo nuestra responsabilidad y que puede suponer un riesgo para sus derechos y libertades.',
+      '',
+      '¿Qué ha ocurrido?',
+      a.incident_desc,
+      '',
+      'Fecha de detección: ' + fechaDeteccion,
+      '',
+      '¿Qué datos suyos pueden estar afectados?',
+      categoriasDatos,
+      '',
+      '¿Qué consecuencias puede tener para usted?',
+      consecuencias.join(' '),
+      '',
+      '¿Qué medidas hemos adoptado?',
+      '[Describa aquí las medidas técnicas y organizativas implantadas para contener el incidente y evitar su repetición]',
+      '',
+      '¿Qué puede hacer usted?',
+      'Le recomendamos que:',
+      '— Extreme la precaución ante comunicaciones inesperadas que soliciten datos personales o credenciales.',
+      '— Revise sus cuentas bancarias y servicios en línea para detectar cualquier actividad no autorizada.',
+      '— En caso de detectar un uso indebido de sus datos, puede presentar una reclamación ante la Agencia Española de Protección de Datos (aepd.es).',
+      '',
+      '¿Con quién puede contactar?',
+      'Para cualquier consulta relacionada con este incidente, puede dirigirse a:',
+      '[NOMBRE_DPD / RESPONSABLE], en calidad de [Delegado de Protección de Datos / Responsable de Seguridad]',
+      'Correo: [EMAIL_CONTACTO]',
+      'Teléfono: [TELÉFONO_CONTACTO — opcional]',
+      '',
+      'Lamentamos los inconvenientes que esta situación pueda causarle y le garantizamos nuestro compromiso con la protección de sus datos.',
+      '',
+      'Atentamente,',
+      '[NOMBRE_ORGANIZACIÓN]',
+      '[CARGO_FIRMANTE]',
+      '[FECHA_COMUNICACIÓN]',
+    ].join('\n');
+
     html += `<div class="section-label">Plantillas pre-rellenadas</div>
     <div class="advisory-card" style="border-left-color: var(--accent)">
-      <div class="advisory-tag">// Basadas en tu descripción del incidente</div>
+      <div class="advisory-tag">// art. 34 RGPD — campos en naranja para rellenar manualmente</div>
       <div class="advisory-title">Comunicación a afectados — Borrador</div>
       <div class="advisory-body">
-        <p style="margin-bottom:12px;font-size:13px;color:var(--text-dim)">Asunto: Comunicación importante sobre la seguridad de tus datos</p>
-        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.7;color:var(--text-dim)">
-          <span style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:11px">Regulación afectada: ${escapeHtml(regulacionAfectada)}</span><br><br>
+        <p style="margin-bottom:12px;font-size:13px;color:var(--text-dim)">Asunto: Comunicación importante sobre la seguridad de sus datos personales</p>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:16px;font-size:13px;line-height:1.7;color:var(--text-dim);font-family:'DM Mono',monospace">
           Estimado/a [Nombre],<br><br>
-          Nos dirigimos a usted para informarle de un incidente de seguridad que puede haber afectado a sus datos personales.<br><br>
+          Le escribimos para informarle de un incidente de seguridad que ha afectado a datos personales bajo nuestra responsabilidad y que puede suponer un riesgo para sus derechos y libertades.<br><br>
           <strong style="color:var(--text)">¿Qué ha ocurrido?</strong><br>
           ${escapeHtml(a.incident_desc)}<br><br>
-          <strong style="color:var(--text)">¿Qué datos pueden verse afectados?</strong><br>
-          ${selectedDataObjects.filter(d => d.personal && !selectedDataTypes.includes('ninguno')).map(d=>d.label).join(', ') || 'Datos bajo investigación'}.<br><br>
-          <strong style="color:var(--text)">¿Qué medidas hemos tomado?</strong><br>
-          [Describe las medidas de contención ya adoptadas]<br><br>
+          Fecha de detección: ${escapeHtml(fechaDeteccion)}<br><br>
+          <strong style="color:var(--text)">¿Qué datos suyos pueden estar afectados?</strong><br>
+          ${escapeHtml(categoriasDatos)}<br><br>
+          <strong style="color:var(--text)">¿Qué consecuencias puede tener para usted?</strong><br>
+          ${consecuencias.map(c => escapeHtml(c)).join('<br>')}<br><br>
+          <strong style="color:var(--text)">¿Qué medidas hemos adoptado?</strong><br>
+          <span style="color:var(--amber)">[Describa aquí las medidas técnicas y organizativas implantadas para contener el incidente y evitar su repetición]</span><br><br>
           <strong style="color:var(--text)">¿Qué puede hacer usted?</strong><br>
-          ${hasSensitive || hasFinancialData ? '• Revise sus extractos bancarios y esté alento a movimientos sospechosos.<br>• Cambie sus contraseñas si utilizó las mismas credenciales en otros servicios.<br>' : '• Esté alerto a comunicaciones sospechosas que puedan usar sus datos.<br>'}
-          • Si detecta cualquier uso indebido de sus datos, puede contactar con la AEPD (aepd.es).<br><br>
-          Para cualquier consulta, puede contactar con nuestro Delegado de Protección de Datos en: [email DPD]<br><br>
+          Le recomendamos que:<br>
+          — Extreme la precaución ante comunicaciones inesperadas que soliciten datos personales o credenciales.<br>
+          — Revise sus cuentas bancarias y servicios en línea para detectar cualquier actividad no autorizada.<br>
+          — En caso de detectar un uso indebido de sus datos, puede presentar una reclamación ante la Agencia Española de Protección de Datos (aepd.es).<br><br>
+          <strong style="color:var(--text)">¿Con quién puede contactar?</strong><br>
+          Para cualquier consulta relacionada con este incidente, puede dirigirse a:<br>
+          <span style="color:var(--amber)">[NOMBRE_DPD / RESPONSABLE]</span>, en calidad de <span style="color:var(--amber)">[Delegado de Protección de Datos / Responsable de Seguridad]</span><br>
+          Correo: <span style="color:var(--amber)">[EMAIL_CONTACTO]</span><br>
+          Teléfono: <span style="color:var(--amber)">[TELÉFONO_CONTACTO — opcional]</span><br><br>
+          Lamentamos los inconvenientes que esta situación pueda causarle y le garantizamos nuestro compromiso con la protección de sus datos.<br><br>
           Atentamente,<br>
-          [Nombre de la organización]
+          <span style="color:var(--amber)">[NOMBRE_ORGANIZACIÓN]</span><br>
+          <span style="color:var(--amber)">[CARGO_FIRMANTE]</span><br>
+          <span style="color:var(--amber)">[FECHA_COMUNICACIÓN]</span>
         </div>
+        <div style="margin-top:12px;display:flex;justify-content:flex-end">
+          <button id="copyDraftBtn" onclick="copyDraft()" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:8px 16px;font-size:12px;font-family:'DM Mono',monospace;color:var(--text);cursor:pointer;transition:background 0.2s,color 0.2s,border-color 0.2s">Copiar texto</button>
+        </div>
+        <p style="margin-top:10px;font-size:11px;color:var(--text-muted);line-height:1.5;font-style:italic">Esta comunicación debe realizarse sin dilación indebida cuando el responsable determine que el riesgo para los derechos y libertades de los afectados es alto (art. 34 RGPD). El correo electrónico ordinario no garantiza prueba fehaciente de entrega; considere el uso de comunicación certificada o un tercero de confianza acreditado.</p>
       </div>
     </div>`;
   }
@@ -2490,6 +2566,22 @@ function showScreen(id) {
 function toggleCard(id) {
   const card = document.getElementById(`obl_${id}`);
   card.classList.toggle('open');
+}
+
+function copyDraft() {
+  if (!window._draftText) return;
+  navigator.clipboard.writeText(window._draftText).then(() => {
+    const btn = document.getElementById('copyDraftBtn');
+    if (!btn) return;
+    btn.textContent = '¡Copiado!';
+    btn.style.color = 'var(--green)';
+    btn.style.borderColor = 'var(--green)';
+    setTimeout(() => {
+      btn.textContent = 'Copiar texto';
+      btn.style.color = 'var(--text)';
+      btn.style.borderColor = 'var(--border)';
+    }, 2000);
+  });
 }
 
 function restart() {

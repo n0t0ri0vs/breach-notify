@@ -12,7 +12,7 @@ BreachNotify es una herramienta pública de notificación de incidentes de ciber
 **Archivo principal:** `breach-notify.html` en la raíz del repo.  
 **Demo pública:** https://n0t0ri0vs.github.io/breach-notify/breach-notify.html  
 **Repo:** https://github.com/n0t0ri0vs/breach-notify  
-**Versión actual:** v1.4.1
+**Versión actual:** v1.5.0
 
 ---
 
@@ -26,6 +26,7 @@ BreachNotify es una herramienta pública de notificación de incidentes de ciber
 | v1.3 | Guía Nacional de Notificación (RD-Ley 12/2018, CCN/INCIBE 2020): peligrosidad, canales exactos, plazos, coexistencia NIS2 |
 | v1.4 | Dashboard de impacto at-a-glance (5 tarjetas), exposición legal con jurisprudencia AEPD, renderizado de campo `nota` en obligaciones |
 | v1.4.1 | Corrección URLs INCIBE-CERT (ruta `/incidentes/` faltante) + enlace directo al formulario oficial de notificación |
+| v1.5.0 | Borrador comunicación a afectados rediseñado: plantilla completa art. 34 RGPD, consecuencias dinámicas por categoría de datos, botón "Copiar texto" con feedback, nota legal |
 
 ---
 
