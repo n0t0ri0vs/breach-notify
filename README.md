@@ -7,6 +7,11 @@ Sin servidor. Sin base de datos. Todo se procesa localmente en tu navegador.
 
 ---
 
+## Attribution
+
+BreachNotify was created by [Sergio Henestrosa](https://github.com/n0t0ri0vs). 
+If you build on this project or use it as inspiration, a mention of the original is appreciated.
+
 ## Qué hace
 
 En menos de 5 minutos determina qué obligaciones de notificación aplican a tu incidente y genera un plan de acción con plazos, checklists y borradores de comunicación.
